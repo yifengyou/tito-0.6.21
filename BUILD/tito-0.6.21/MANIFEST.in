@@ -1,0 +1,9 @@
+include AUTHORS
+include LICENSE
+include MANIFEST.in
+include COPYING
+include README.md
+include *.asciidoc
+include doc/*
+recursive-include bin *.*
+recursive-include test *.*

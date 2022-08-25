@@ -1,0 +1,81 @@
+titorc(5)
+=========
+include::man.asciidoc[]
+
+NAME
+----
+titorc - A user specific settings file for `tito`.
+
+
+SYNOPSIS
+--------
+None
+// older asciidoc versions (such as the version for .el5) require a synopsis section
+
+
+DESCRIPTION
+-----------
+User preferences can optionally be stored:
+
+`~/.titorc`
+
+
+OPTIONS
+-------
+KOJI_OPTIONS::
+Specify strings of options, which is passed to koji on commandline when you
+use KojiReleaser. For example:
+
+  KOJI_OPTIONS=-c ~/.koji/katello-config build --nowait
+
+NO_AUTO_INSTALL::
+Specify list of packages (separated by space), which should NOT be installed,
+when tito is run with -i option.
+
+RPMBUILD_BASEDIR::
+Specifies a base directory for temp files, tarballs, and RPMs.
+If defined, and if the directory exists, `tito` will automatically
+create subdirectories as needed for rpmbuild(8). Can be overridden
+on the fly with -o. The default output directory is /tmp/tito.
+
+HIDE_EMAIL::
+If set to something other than 0, your email address will not be used in
+changelog entries. I.e. instead of
+ * Tue Feb 11 2011 Miroslav Suchy <msuchy@redhat.com> 0.3.0-2
+You will get:
+ * Tue Feb 11 2011 Miroslav Suchy 0.3.0-2
+
+RHPKG_USER::
+FEDPKG_USER::
+By default this is the UNIX user running the command. Overriding it will run
+all rhpkg/fedpkg commands with --user $RHPKG_USER/FEDPKG_USER
+
+COLOR::
+Set to '0' or 'False' to disable colored output.
+
+MEAD_SCM_USERNAME::
+The username to use when pushing the repository MEAD is going to build
+from.  If this value is unset, the MEAD releaser will default to using
+the name of the current user.
+
+COPR_REMOTE_LOCATION::
+URL that Tito will push SRPMs to for Copr to use.
+
+EXAMPLE
+-------
+KOJI_OPTIONS=-c ~/.koji/spacewalkproject.org-config build --nowait
+
+----
+# Default Location to write temp files, tarballs and rpms to:
+RPMBUILD_BASEDIR = "/tmp/tito"
+----
+
+
+SEE ALSO
+--------
+tito(8)
+
+
+AUTHORS
+-------
+include::AUTHORS[]

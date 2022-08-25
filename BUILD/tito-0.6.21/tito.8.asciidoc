@@ -1,0 +1,299 @@
+tito(8)
+=======
+include::man.asciidoc[]
+
+NAME
+----
+tito - manage RPM based projects using git
+
+
+SYNOPSIS
+--------
+tito init
+
+tito tag [OPTIONS]
+
+tito build --test --rpm
+
+tito build [OPTIONS]
+
+tito release [OPTIONS] TARGET
+
+tito report
+
+
+
+DESCRIPTION
+-----------
+
+After setting up a directory as a Git repo, use `tito`
+to manage the tags and builds. A simple workflow may look like:
+
+. Save user preferences as described in `titorc(5)`
+. Initialize a `.tito` directory
+. Test
+  .. Make changes to source
+  .. Use git to commit changes
+  .. Build: `tito build --rpm --test`
+. Finalize a release
+  .. Tag: `tito tag`
+  .. Push: `git push && git push $ORIGIN $TAG`
+  .. Build: `tito build [OPTIONS]`
+
+
+
+OPTIONS
+-------
+
+`tito init`
+~~~~~~~~~~~
+
+This will create a top-level metadata directory called ".tito/" and commit it
+to git. This directory will store tito's configuration and package metadata on
+a per branch basis. It will be filtered out when creating .tar.gz's.
+
+NOTE: Your spec file should list the source as `%{name}-%{version}.tar.gz`
+
+`tito tag [options]`
+~~~~~~~~~~~~~~~~~~~~
+
+By default, tito will tag by bumping the rpm version
+(i.e. we bump the Z in X.Y.Z). If you'd prefer to bump the package
+release instead (normally should just be used for changes to the spec file or
+patches applied within it), you can change the tagger class in
+.tito/tito.props to ReleaseTagger. This will affect all packages in this git
+branch; if you'd prefer to do this on a per-package basis you can do so in a
+package specific `tito.props`.
+
+If you work in a OBS style git with a separate .changes file for the changelog,
+change the tagger class to `tito.susetagger.SUSETagger`. The SUSETagger is based
+on the VersionTagger.
+
+-h, --help::
+show this help message and exit
+
+--debug::
+print debug messages (can be also set using DEBUG environment variable)
+
+--offline::
+do not attempt any remote communication (avoid using
+this please)
+
+-o 'OUTPUTDIR', --output='OUTPUTDIR'::
+Write temp files, tarballs, and RPMs to 'OUTPUTDIR'.
+Create sub-directories as needed by rpmbuild(8).
+(default `/tmp/tito`)
+
+--tag-release::
+Deprecated, no longer required.
+
+--keep-version::
+Use spec file version/release exactly as specified in
+spec file to tag package.
+
+--use-version='USE_VERSION'::
+Update the spec file with the specified version.
+
+--use-release='USE_RELEASE'::
+Update the spec file with the specified release.
+
+--no-auto-changelog::
+Don't automatically create a changelog entry for this
+tag if none is found
+
+--accept-auto-changelog::
+Automatically accept the generated changelog.
+
+--auto-changelog-message='MESSAGE'::
+Use 'MESSAGE' as the default changelog message for new
+packages
+
+--changelog='MESSAGE'::
+Use 'MESSAGE' as the changelog when tagging, this can be specified
+every time a package is tagged. Useful when needing to generate
+custom changelogs. This will override the auto generated changelog.
+
+-u, --undo::
+Undo the most recent (un-pushed) tag.
+
+NOTE: Tito will create automatic changelog from git commits.
+Unless you specify one of auto options, tito will open text editor and allow
+you to edit the text. Editor is by default. This can be changes by
+environment variable EDITOR.
+
+`tito build [options]`
+~~~~~~~~~~~~~~~~~~~~~~
+
+-h, --help::
+show this help message and exit
+
+--debug::
+print debug messages (can be also set using DEBUG environment variable)
+
+--offline::
+do not attempt any remote communication. Avoid using
+this please. See OFFLINE section below.
+
+-o 'OUTPUTDIR', --output='OUTPUTDIR'::
+Write temp files, tarballs and RPMs to 'OUTPUTDIR'.
+(default /tmp/tito)
+
+--tgz::
+Build .tar.gz
+
+--srpm::
+Build srpm
+
+--rpm::
+Build srpm and rpm
+
+-i, --install::
+Install any binary RPMs being built.
+
+WARNING: uses `sudo rpm -Uvh --force`
+
+--no-sudo::
+Don't escalate privileges when installing. Use when running this command with required privileges.
+
+--dist='DISTTAG'::
+Apply 'DISTTAG' to srpm and/or rpm. (e.g., ".el5")
+
+--test::
+use current branch HEAD instead of latest package tag.
+
+--no-cleanup::
+do not clean up temporary build directories/files
+
+--rpmbuild-options='OPTIONS'::
+Pass 'OPTIONS' to rpmbuild.
+
+--builder='BUILDER'::
+Override the normal builder by specifying a full class
+path or one of the pre-configured shortcuts. Only useful if you need to
+override the default builder for some purpose, such as testing a build via mock.
+
+--arg='BUILDER_ARGS'::
+Custom arguments specific to a particular builder. (key=value)
+
+--scl='COLLECTION'::
+Build package for software collection. This is mostly useful for building
+src.rpm, because for rpm you want to define this option for specific tag in tito.props
+
+--quiet::
+Suppress output from the build process.
+
+--verbose::
+Expose more output from the build process.
+
+
+`tito release [options] TARGETS`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Runs the release targets defined in .tito/releasers.conf.
+
+-h, --help::
+show this help message and exit
+
+--debug::
+print debug messages (can be also set using DEBUG environment variable)
+
+--offline::
+do not attempt any remote communication. Avoid using
+this please. See OFFLINE section below.
+
+-o 'OUTPUTDIR', --output='OUTPUTDIR'::
+Write temp files, tarballs and RPMs to 'OUTPUTDIR'.
+(default /tmp/tito)
+
+--tag='PKGTAG'::
+build a specific tag instead of the latest version
+(e.g., `spacewalk-java-0.4.0-1`)
+
+--dry-run::
+Do not actually commit/push anything during release.
+
+--no-build::
+Do not perform a brew/koji build, only DistGit commit.
+(only for Koji/DistGit releasers)
+
+--all::
+Run all release targets defined in .tito/releasers.conf.
+
+--list::
+List all release targets defined in .tito/releasers.conf.
+
+--all-starting-with=ALL_STARTING_WITH::
+Run all release targets starting with the given string. (i.e.
+if you have defined release targets yum-f15 and yum-f14 in releasers.conf,
+--all-starting-with=yum will run only these targets, and ignore any others.)
+
+--scratch::
+Perform a scratch build in Koji.
+Can be specified using environment variable SCRATCH set to 1 as well.
+
+--yes::
+Do not ask to confirm release commits or edit their messages.
+
+`tito report [options]`
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Display a report of all packages with differences between
+HEAD and their most recent tag, as well as a patch for
+that diff. Used to determine which packages are in need
+of a rebuild.
+
+-h, --help::
+show this help message and exit
+
+--debug::
+print debug messages (can be also set using DEBUG environment variable)
+
+--offline::
+do not attempt any remote communication. Avoid using
+this please. See OFFLINE section below.
+
+-o 'OUTPUTDIR', --output='OUTPUTDIR'::
+Write temp files, tarballs and RPMs to 'OUTPUTDIR'.
+(default /tmp/tito)
+
+--untagged-diffs::
+Print out diffs for all packages with changes between
+their most recent tag and HEAD. Useful for determining
+which packages are in need of a re-tag.
+
+--untagged-commits::
+Print out the list for all packages with changes
+between their most recent tag and HEAD. Useful for
+determining which packages are in need of a re-tag.
+
+OFFLINE
+-------
+
+Offline lets you potentially do builds you can't reproduce, normally we check
+that the tag you're building exists in the remote repo. If it hasn't been
+pushed, it's quite easy to do a build that will result in a checksum that is no
+longer the same. This is something you should try to avoid.
+
+EXAMPLES
+--------
+
+Build and install a test package from the latest code in current git HEAD::
+tito build --rpm --test -i
+
+Overriding the default builder to build via mock instead::
+tito build --builder mock --arg mock=fedora-15-x86_64 --rpm
+
+
+SEE ALSO
+--------
+titorc(5)
+releasers.conf(5)
+tito.props(5)
+
+/usr/share/doc/tito-*/README.mkd
+
+
+
+AUTHORS
+-------
+include::AUTHORS[]

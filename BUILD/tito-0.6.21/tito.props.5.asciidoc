@@ -1,0 +1,286 @@
+tito.props(5)
+============
+include::man.asciidoc[]
+
+NAME
+----
+tito.props - directives for tito(5) how to build package.
+
+
+SYNOPSIS
+--------
+None
+// older asciidoc versions (such as the version for .el5) require a synopsis section
+
+
+DESCRIPTION
+-----------
+Project settings can be stored in files:
+
+`GITROOT/.tito/tito.props`
+
+`GITROOT/SOME/PACKAGE/tito.props`
+
+The global .tito/tito.props is generally where settings are defined. For
+some multi-project git repositories, individual packages can override these
+settings by placing a tito.props in the project directory. (i.e. same location
+as it's .spec file)
+
+
+SECTIONS
+--------
+tito.props can contain several sections:
+
+
+BUILDCONFIG
+------------
+This section and a couple of its properties are required.
+You can use following variables:
+
+builder::
+The fully qualified Builder class implementation to use.
+You can either specify builders shipped with tito(5) (see BUILDERS section
+below), or a custom builder located within the directory your `lib_dir` option
+points to. This property is required.
+
+tagger::
+The fully qualified Tagger class implementation to use.
+You can either specify taggers shipped with tito(5) (see TAGGERS section
+below), or a custom tagger located within the directory your `lib_dir` option
+points to. This property is required.
+
+lib_dir::
+Optional property defining a directory to be added to the Python path when
+executing tito. Allows you to store custom implementations of Builder, Tagger,
+and Releaser.
+
+changelog_format::
+This option is used to control the formatting of entries when
+generating changelog entries.  The default value is "%s (%ae)".  See
+PRETTY FORMATS in git-log(1) for more information.
+
+changelog_with_email::
+If set to 0, then entries in changelog (subject of commits) are not
+followed by email of committer. Default is 1.  This option is
+deprecated and provided for backwards-compatibility only.  New
+configurations should consider changelog_format instead.
+
+changelog_do_not_remove_cherrypick::
+If set to 0, it will not remove from cherry picked commits the part "(cherry
+picked from commit ...)"
+
+changelog_date_with_time::
+By default, changelog dates don't contain time (e.g. Wed Nov 1 2017). When
+this option is set to `True`, changelog entries are generated in a datetime
+format (e.g. Wed Nov 1 11:08:13 EDT 2017). This feature requires RPM 4.14,
+therefore it is supported only on Fedora 27, EPEL8, openSUSE Leap 15 and higher.
+
+tag_suffix::
+An optional specification of a suffix to append to all tags created by tito
+for this repo. Can be useful for situations where one git repository is
+inheriting from another, but tags are created in both. The suffix will be an
+indicator as to which repo the tag originated in. (i.e. tag_suffix = -mysuffix)
+
+tag_commit_message_format::
+This option is used control the text of git commit message that is used when
+new tag is generated. You can use "%(name)s", "%(release_type)s" and
+"%(version)s" placeholders.
+
+tag_format::
+This option controls the format used in VersionTagger. If not specified
+default format would be '{component}-{version}-{release}'. It won't affect
+other taggers.
+
+sign_tag::
+This boolean enables GnuPG signed tags using 'git tag -s'.
+
+fetch_sources::
+If true, download sources from predefined Source<N> addresses to the
+SOURCE folder.
+
+
+KOJI and COPR
+-------------
+
+disttag::
+Dist tag variable, which is passed to rpmbuild for packages build in this tag.
+
+blacklist::
+Space separated list of packages, which should not be built in this tag.
+
+whitelist::
+If whitelist is present, only packages listed here can be built in this tag.
+This also override blacklist.
+
+scl::
+Specify name of Software Collection into which package should be build.
+
+VERSION_TEMPLATE
+----------------
+Allows the user to write out a template file containing version and/or release and add it to git during the tagging process.
+
+template_file::
+Path to a file conforming to a Python string.Template, as described at http://docs.python.org/2/library/string.html#template-strings. Path is relative to root of the entire git checkout, as this is likely to be stored in the top level .tito directory.  The variables $version and $release are available inside the template.
+
+destination_file::
+Specifies a file to write, relative to the directory for the package being tagged.
+
+Example:
+
+----
+[version_template]
+destination_file = version.txt
+template_file = .tito/templates/version.rb
+----
+
+
+
+REQUIREMENTS
+------------
+tito::
+If tito is older then specified version, it will refuse to continue.
+
+
+TAGCONFIG
+---------
+require_package::
+Comma separated list of packages, which needs to be installed prior tagging. If those
+packages are not installed, tito will refuse to continue.
+
+BUILDERS
+--------
+
+tito.builder.Builder::
+Basic package builder. It create tar.gz of whole directory and create src.rpm
+and build rpm using some supported method.
+
+tito.builder.MockBuilder::
+Use `mock` instead of `rpmbuild` for building an RPM package.
+See doc/builders.md.
+
+tito.builder.NoTgzBuilder::
+Builder for packages that do not require the creation of tarball.
+Usually these package have source files checked directly into git.
+
+tito.builder.UpstreamBuilder::
+Builder for packages that are based off an upstream git tag.
+Commits applied in downstream git become patches applied to the upstream
+tarball.
+For example - you are building package foo-1.2-3... Tar.gz file is created from
+commit, which is tagged by foo-1.2-1 and the diff between release 1 and 3 is
+put in spec file as Patch0.
+
+tito.builder.GemBuilder::
+Builder for packages that list a .gem as Source0, the .gemspec shares a
+directory hierarchy with the .spec file and the upstream does not want to check
+.gem files into their git repository.
+
+tito.distributionbuilder.DistributionBuilder::
+Behave similar as tito.builder.UpstreamBuilder, but patch is created for every
+release. Therefore package from previous example will end up with tar.gz file
+created from tag foo-1.2-1 and with
+ Patch0: foo-1.2-1-to-foo-1.2-2.patch
+ Patch1: foo-1.2-1-to-foo-1.2-3.patch
+
+tito.builder.FetchBuilder::
+See doc/builders.mkd.
+
+----
+[builder]
+fetch_strategy = tito.builder.fetch.ArgSourceStrategy
+----
+
+ArgSourceStrategy here could be replaced with a custom strategy if you were to
+have one in your lib_dir.
+
+tito.builder.GitAnnexBuilder::
+See doc/builders.mkd.
+
+Builder for packages with existing tarballs checked in using git-annex, e.g.
+referencing an external source (web remote).  This builder will "unlock" the
+source files to get the real contents, include them in the SRPM, then restore
+the automatic git-annex symlinks on completion.
+
+TAGGERS
+-------
+All taggers which inherit from tito.tagger.VersionTagger (all to this date),
+will update file GITROOT/.tito/packages/name-of-package and put there one
+line which consist of version-release of package, space delimiter, path to
+package directory relative to GITROOT.
+
+tito.tagger.VersionTagger::
+Standard tagger class, used for tagging packages build from source in git.
+Release will be tagged by incrementing the package version, and the actual
+"Release" will be always set to 1.
+
+tito.tagger.ReleaseTagger::
+Keep version and increment release.
+
+tito.zstreamtagger.zStreamTagger::
+Tagger which increments zstream number in release. I.e. x.y.z-r%{dist}.Z+1
+It is used for EUS packages.
+
+tito.rheltagger.RHELTagger::
+Tagger which is based on ReleaseTagger and uses Red Hat Enterprise Linux
+changelog format:
+- Resolves: #1111 - description
+- Related: #1111 - description
+
+RELEASER
+--------
+You can create section with the name same as releaser target and there you can
+specify this option:
+
+remote_git_name::
+This is useful for FedoraGitReleaser and DistGitReleaser and will allow you to
+specify name of remote dist-git branch.
++
+For example let say you have in releaser.conf:
+ [git-sat]
+ releaser = tito.release.DistGitReleaser
+ branches = satellite-6.0-rhel-6
++
+and then you can add remote_git_name:
+ [git-sat]
+ releaser = tito.release.DistGitReleaser
+ branches = satellite-6.0-rhel-6
+ remote_git_name = ruby193-rubygem-simple-navigation
+And it will push package into ruby193-rubygem-simple-navigation dist-git despite the
+fact that it is in /rubygem-simple-navigation directory. And project name (as taken
+from spec file) is rubygem-simple-navigation.
+
+tito.susetagger.SUSETagger::
+Tagger which is based on VersionTagger and deal with SUSE / OBS specific
+separate changes file and format.
+
+EXAMPLE
+-------
+ [buildconfig]
+ builder = tito.builder.Builder
+ tagger = tito.tagger.VersionTagger
+
+ [koji]
+ autobuild_tags = dist-5E-sw-1.2-candidate dist-f12-sw-1.2-candidate dist-f13-sw-1.2-candidate
+
+ [dist-5E-sw-1.2-candidate]
+ disttag = .el5
+
+ [dist-f12-sw-1.2-candidate]
+ disttag = .fc12
+ blacklist=jabberd-selinux
+
+ [dist-f13-sw-1.2-candidate]
+ disttag = .fc13
+ blacklist=jabberd-selinux
+
+ [requirements]
+ tito=0.3.0
+
+SEE ALSO
+--------
+tito(8) titorc(5)
+
+
+AUTHORS
+-------
+include::AUTHORS[]
